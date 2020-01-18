@@ -38,12 +38,21 @@ class AutocompleteTrie:
         new children nodes correspondingly.
         '''
         val = m_term.term
+        defn = m_term.definition
         curr_node = self.root
         
         # NEW NEW NEW NEW
+        
+        # add completions & their definitions if they exist
         related_terms_exist = False
         if m_term.related_terms:
             related_terms_exist = True
+            
+            completed_terms_and_definitions = []
+            for term in m_term.related_terms:
+                if term in medical_dictionary:
+                    completed_terms_and_definitions.append((term, medical_dictionary[term].definition))
+            
         # NEW NEW NEW NEW
         
         for i in range(0, len(val)):
@@ -55,9 +64,10 @@ class AutocompleteTrie:
                 new_node = Node(stubbed_suggestion)
                 
                 # NEW NEW NEW NEW
-                new_node.completions.append(val)
+                # append completions
+                new_node.completions.append((val, defn))
                 if related_terms_exist:
-                    new_node.completions.extend(m_term.related_terms)
+                    new_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW 
                 
                 curr_node.children[char] = new_node
@@ -66,9 +76,10 @@ class AutocompleteTrie:
                 curr_node = curr_node.children[char]
                 
                 # NEW NEW NEW NEW
-                curr_node.completions.append(val)
+                # append completions
+                curr_node.completions.append((val, defn))
                 if related_terms_exist:
-                    curr_node.completions.extend(m_term.related_terms)
+                    curr_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW
         
         curr_node.medical_term = m_term
@@ -91,7 +102,8 @@ class AutocompleteTrie:
                 curr_node = curr_node.children[k]
                 
         if curr_node.completed:
-            return (curr_node.val, curr_node.medical_term.definition, curr_node.medical_term.related_terms)
+            return curr_node
+#             return (curr_node.val, curr_node.medical_term.definition, curr_node.medical_term.related_terms)
         else:
             return False
 

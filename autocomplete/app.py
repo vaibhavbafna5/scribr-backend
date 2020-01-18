@@ -7,6 +7,9 @@ import pickle
 import gunicorn
 import random
 
+
+import random
+
 # object to store medical terms
 class MedicalTerm:
     
@@ -44,12 +47,21 @@ class AutocompleteTrie:
         new children nodes correspondingly.
         '''
         val = m_term.term
+        defn = m_term.definition
         curr_node = self.root
         
         # NEW NEW NEW NEW
+        
+        # add completions & their definitions if they exist
         related_terms_exist = False
         if m_term.related_terms:
             related_terms_exist = True
+            
+            completed_terms_and_definitions = []
+            for term in m_term.related_terms:
+                if term in medical_dictionary:
+                    completed_terms_and_definitions.append((term, medical_dictionary[term].definition))
+            
         # NEW NEW NEW NEW
         
         for i in range(0, len(val)):
@@ -61,9 +73,10 @@ class AutocompleteTrie:
                 new_node = Node(stubbed_suggestion)
                 
                 # NEW NEW NEW NEW
-                new_node.completions.append(val)
+                # append completions
+                new_node.completions.append((val, defn))
                 if related_terms_exist:
-                    new_node.completions.extend(m_term.related_terms)
+                    new_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW 
                 
                 curr_node.children[char] = new_node
@@ -72,9 +85,10 @@ class AutocompleteTrie:
                 curr_node = curr_node.children[char]
                 
                 # NEW NEW NEW NEW
-                curr_node.completions.append(val)
+                # append completions
+                curr_node.completions.append((val, defn))
                 if related_terms_exist:
-                    curr_node.completions.extend(m_term.related_terms)
+                    curr_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW
         
         curr_node.medical_term = m_term
@@ -97,7 +111,8 @@ class AutocompleteTrie:
                 curr_node = curr_node.children[k]
                 
         if curr_node.completed:
-            return (curr_node.val, curr_node.medical_term.definition, curr_node.medical_term.related_terms)
+            return curr_node
+#             return (curr_node.val, curr_node.medical_term.definition, curr_node.medical_term.related_terms)
         else:
             return False
 
@@ -135,16 +150,49 @@ class AutocompleteTrie:
 # boot server & load data
 print("Server is live :)")
 
-filehandler = open('medical_dictionary.pkl', 'rb')
-medical_dictionary = pickle.load(filehandler)
+filehandler = open('autocomplete/terms.pkl', 'rb')
+terms = pickle.load(filehandler)
 
-filehandler = open('autocomplete_trie.pkl', 'rb')
-autocomplete_trie = pickle.load(filehandler)
+# function to parse related terms from medical definitions
+complete_related_terms = []
+
+def get_related_terms(defn):
+    # check if related terms exist
+    start_loc = defn.find('See')
+    if start_loc != -1:
+        end_loc = defn.find('.', start_loc)
+        defn = defn[start_loc:end_loc + 1]
+        defn = defn[defn.find('See'):]
+        defn = defn[defn.find(' '):]
+        related_terms = defn.strip(' ').split(';')
+        for i in range(0, len(related_terms)):
+            related_terms[i] = related_terms[i].strip('. ').lower()
+        
+        return related_terms
+    
+# build dictionary of terms to object
+medical_dictionary = {}
+for term in terms:
+    defn = terms[term]
+    word = term.lower()
+    medical_dictionary[word] = MedicalTerm(defn, word, get_related_terms(defn))
+
+# creating the trie & stuffing it with our medical terms
+autocomplete_trie = AutocompleteTrie()
+for term in medical_dictionary:
+    autocomplete_trie.insert_word(medical_dictionary[term])
+
+dummy = autocomplete_trie.find_word('alkalosis, respiratory')
+print(dummy.completions)
+
+# filehandler = open('medical_dictionary.pkl', 'rb')
+# medical_dictionary = pickle.load(filehandler)
+
+# filehandler = open('autocomplete_trie.pkl', 'rb')
+# autocomplete_trie = pickle.load(filehandler)
 
 app = Flask(__name__)
 CORS(app)
-
-app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route('/')
 def say_hi():
