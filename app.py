@@ -2,7 +2,7 @@
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from trie import MedicalTerm, Node, AutocompleteTrie
+from .trie import MedicalTerm, Node, AutocompleteTrie
 import json
 import pickle
 import gunicorn
