@@ -1,1 +1,1 @@
-web: gunicorn autocomplete:app
+web: gunicorn app:app

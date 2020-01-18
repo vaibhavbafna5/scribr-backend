@@ -7,9 +7,6 @@ import pickle
 import gunicorn
 import random
 
-
-import random
-
 # object to store medical terms
 class MedicalTerm:
     
@@ -112,7 +109,6 @@ class AutocompleteTrie:
                 
         if curr_node.completed:
             return curr_node
-#             return (curr_node.val, curr_node.medical_term.definition, curr_node.medical_term.related_terms)
         else:
             return False
 
@@ -150,7 +146,7 @@ class AutocompleteTrie:
 # boot server & load data
 print("Server is live :)")
 
-filehandler = open('autocomplete/terms.pkl', 'rb')
+filehandler = open('terms.pkl', 'rb')
 terms = pickle.load(filehandler)
 
 # function to parse related terms from medical definitions
@@ -238,4 +234,4 @@ def update_term():
     return {'status': 'success'}
 
 if __name__ == "__main__": 
-    app.run(debug=True)
+    app.run()
