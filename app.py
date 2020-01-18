@@ -7,6 +7,8 @@ import pickle
 import gunicorn
 import random
 
+# -------DATA STRUCTURES & OBJECTS FOR FAST QUERYING--------
+
 # object to store medical terms
 class MedicalTerm:
     
@@ -16,6 +18,8 @@ class MedicalTerm:
         self.related_terms = related_terms
         self.score = random.randint(0, 10)
 
+
+# singular node in autocomplete trie
 class Node:
     '''
     Each node stores a value, a MedicalTerm object (as defined above), 
@@ -27,7 +31,9 @@ class Node:
         self.children = {}
         self.completions = []
         self.completed = False
-        
+
+
+# autocomplete trie object
 class AutocompleteTrie:
     
     def __init__(self):
@@ -57,7 +63,7 @@ class AutocompleteTrie:
             completed_terms_and_definitions = []
             for term in m_term.related_terms:
                 if term in medical_dictionary:
-                    completed_terms_and_definitions.append((term, medical_dictionary[term].definition))
+                    completed_terms_and_definitions.append((term, medical_dictionary[term].definition, medical_dictionary[term].score))
             
         # NEW NEW NEW NEW
         
@@ -71,7 +77,7 @@ class AutocompleteTrie:
                 
                 # NEW NEW NEW NEW
                 # append completions
-                new_node.completions.append((val, defn))
+                new_node.completions.append((val, defn, m_term.score))
                 if related_terms_exist:
                     new_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW 
@@ -83,7 +89,7 @@ class AutocompleteTrie:
                 
                 # NEW NEW NEW NEW
                 # append completions
-                curr_node.completions.append((val, defn))
+                curr_node.completions.append((val, defn, m_term.score))
                 if related_terms_exist:
                     curr_node.completions.extend(completed_terms_and_definitions)
                 # NEW NEW NEW NEW
@@ -126,26 +132,14 @@ class AutocompleteTrie:
             
             curr_node = curr_node.children[k]
             
-        return curr_node.completions
-    
-    
-    def find_suggestions_helper(self, node, suggestions):
-        '''
-        Recursive helper function for the above.
-        '''
-        if node.completed:
-            suggestions.append(node.val)
-            # add related terms to suggestions if they exist
-            if node.medical_term.related_terms:
-                suggestions.extend(node.medical_term.related_terms)
-        
-        for c in node.children:
-            self.find_suggestions_helper(node.children[c], suggestions)
+        return sorted(curr_node.completions, key=lambda x: x[2], reverse=True)
+
+# ------- END OF DATA STRUCTURES & OBJECTS --------
 
 
-# boot server & load data
-print("Server is live :)")
+# ------------- INITIALIZATION OF AUTOCOMPLETE TRIE ------------
 
+# get terms & definitions from pickled file
 filehandler = open('terms.pkl', 'rb')
 terms = pickle.load(filehandler)
 
@@ -173,27 +167,25 @@ for term in terms:
     word = term.lower()
     medical_dictionary[word] = MedicalTerm(defn, word, get_related_terms(defn))
 
-# creating the trie & stuffing it with our medical terms
+# creating the trie & adding our medical terms
 autocomplete_trie = AutocompleteTrie()
 for term in medical_dictionary:
     autocomplete_trie.insert_word(medical_dictionary[term])
 
-dummy = autocomplete_trie.find_word('alkalosis, respiratory')
-print(dummy.completions)
+# ------------- END INITIALIZATION OF AUTOCOMPLETE TRIE ------------
 
-# filehandler = open('medical_dictionary.pkl', 'rb')
-# medical_dictionary = pickle.load(filehandler)
 
-# filehandler = open('autocomplete_trie.pkl', 'rb')
-# autocomplete_trie = pickle.load(filehandler)
-
+# ------------- BOOT SERVER ------------
 app = Flask(__name__)
 CORS(app)
 
+# route to test & indicate server is alive
 @app.route('/')
 def say_hi():
     return 'alive'
 
+
+# route for suggestions for a given prefix
 @app.route('/suggestions', methods=['GET'])
 def find_artists():
     # extract prefix from json
@@ -201,37 +193,20 @@ def find_artists():
     
     # query the trie
     suggestions = autocomplete_trie.find_suggestions(prefix)
-    print("SUGGESTIONS: ", suggestions)
     
     return jsonify(suggestions)
 
+@app.route('/update/<term>', methods=['POST'])
+def update_term_score(term):
 
-@app.route('/insert', methods=['POST'])
-def insert_term():
-    data = request.data.decode('UTF-8')
-    data = json.loads(data)
-    params = data['params']
-
-    # update trie
-    m_term = MedicalTerm(params['defn'], params['term'], params['related_terms'])
-    autocomplete_trie.insert_word(m_term)
-
-    return {'status': 'success'}
-
-
-@app.route('/update', methods=['POST'])
-def update_term():
-    data = request.data.decode('UTF-8')
-    data = json.loads(data)
-    term = data['term']
-
-    # update term's score in trie 
-    m_term = autocomplete_trie.find_word(term)
-    if m_term == False:
-        return {'status': 'failure'}
-    m_term.medical_term.score += 0.5
-
-    return {'status': 'success'}
+    word = autocomplete_trie.find_word(term)
+    if word:
+        word.medical_term.score += 0.5
+        data = {'success': 'term added'}
+        return jsonify(data)
+    else:
+        data = {'failure': 'term not found'}
+        return jsonify(data)
 
 if __name__ == "__main__": 
     app.run()
