@@ -2,8 +2,10 @@
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from trie import MedicalTerm, Node, AutocompleteTrie
 import json
 import pickle
+import gunicorn
 
 # boot server & load data
 print("Server is live :)")
@@ -63,5 +65,4 @@ def update_term():
     return {'status': 'success'}
 
 if __name__ == "__main__": 
-    from trie import MedicalTerm, Node, AutocompleteTrie
     app.run(debug=True)
