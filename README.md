@@ -13,12 +13,13 @@ This source had a few advantages over other sources I evaluated:
 
 For instance, here's an example medical term I found in the glossary.
 
-<aside>
-💡 **Acute pulmonary edema** -- Set of dramatic, life-threatening symptoms, including extreme shortness of breath, rapid breathing, anxiety, cough, bluish lips and nails, and sweating. Usually caused by congestive heart failure. See Congestive heart failure.
+```
+💡 Acute pulmonary edema -- Set of dramatic, life-threatening symptoms, including extreme shortness of breath, rapid breathing, anxiety, cough, bluish lips and nails, and sweating. Usually caused by congestive heart failure. See Congestive heart failure.
+```
 
-</aside>
+The term & definitions are delimited by a '- - ', which is consistent across the definitions in the glossary.
 
-The term & definitions are delimited by a '- - ', which is consistent across the definitions in the glossary. Additionally, congestive heart failure is also outlined as a related condition which signals the ability to suggest conditions that don't necessarily start with 'a'.
+Additionally, congestive heart failure is also outlined as a related condition which signals the ability to suggest conditions that don't necessarily start with 'a'.
 
 **Parsing the Data, Building Data Structures, & Optimizing**
 
